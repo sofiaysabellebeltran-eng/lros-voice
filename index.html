@@ -167,3 +167,18 @@
     </script>
 </body>
 </html>
+
+// Add this function right after addMessage
+function speakResponse(text) {
+    // Stop any current speech
+    window.speechSynthesis.cancel();
+    
+    // Create a new utterance
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';      // English
+    utterance.rate = 1.0;          // Normal speed
+    utterance.pitch = 1.0;         // Normal pitch
+    
+    // Speak it
+    window.speechSynthesis.speak(utterance);
+}
