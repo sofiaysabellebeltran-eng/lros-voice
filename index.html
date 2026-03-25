@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LROS Voice AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a, #0f0f2a);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: rgba(15, 15, 30, 0.9);
+            border-radius: 25px;
+            padding: 25px;
+            width: 100%;
+            max-width: 750px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border: 1px solid #2a2a3a;
+        }
+        
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            color: #888;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+        
+        .chat-box {
+            background: #0a0a14;
+            border-radius: 15px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #2a2a3a;
+        }
+        
+        .message {
+            margin-bottom: 12px;
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 85%;
+            word-wrap: break-word;
+        }
+        
+        .user-message {
+            background: #0078ff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .ai-message {
+            background: #2d2d3a;
+            color: #e0e0e0;
+            margin-right: auto;
+        }
+        
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        input {
+            flex: 1;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 25px;
+            background: #1a1a2a;
+            color: white;
+            font-size: 15px;
+            border: 1px solid #3a3a4a;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #0078ff;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: #0078ff;
+            color: white;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+        
+        button:hover {
+            background: #0066dd;
+        }
+        
+        .voice-btn {
+            background: #00aa77;
+        }
+        
+        .voice-btn:hover {
+            background: #008866;
+        }
+        
+        .status {
+            text-align: center;
+            color: #888;
+            font-size: 11px;
+            margin-top: 8px;
+        }
+        
+        .pattern-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            justify-content: center;
+        }
+        
+        .pattern-btn {
+            background: #2a2a3a;
+            padding: 6px 12px;
+            font-size: 11px;
+        }
+        
+        .pattern-btn.active {
+            background: #0078ff;
+        }
+        
+        .badge {
+            text-align: center;
+            font-size: 10px;
+            color: #00aa77;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 LROS Voice AI</h1>
+        <div class="subtitle">Speak or type – AI responds</div>
+        
+        <div class="pattern-selector">
+            <button class="pattern-btn active" data-pattern="single">⚡ Single</button>
+            <button class="pattern-btn" data-pattern="chain">🔗 Chain</button>
+        </div>
+        
+        <div class="chat-box" id="chatBox">
+            <div class="message ai-message">🔷 Hello. I am LROS. Ask me anything or click the microphone to speak.</div>
+        </div>
+        
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">Send</button>
+            <button class="voice-btn" onclick="startVoice()">🎤 Speak</button>
+        </div>
+        
+        <div class="badge" id="badge">🔒 Constitutional Governance Active</div>
+        <div class="status" id="status">⚡ Ready</div>
+    </div>
+
+    <script>
+        // LROS Voice AI - Full Working Version
+        const API_URL = 'https://lros-backend-slgg.onrender.com/api/chat';
+        let currentPattern = 'single';
+        
+        function addMessage(text, isUser) {
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        // VOICE OUTPUT - THIS MAKES LROS TALK BACK
+        function speakResponse(text) {
+            // Stop any current speech
+            window.speechSynthesis.cancel();
+            
+            // Clean text for better speech
+            let cleanText = text.replace(/[*_#]/g, '').replace(/🔍.*$/m, '');
+            
+            // Create utterance
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.95;
+            utterance.pitch = 1.0;
+            
+            // Speak
+            window.speechSynthesis.speak(utterance);
+            
+            // Update status
+            utterance.onstart = () => document.getElementById('status').textContent = '🔊 Speaking...';
+            utterance.onend = () => document.getElementById('status').textContent = '⚡ Ready';
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addMessage(message, true);
+            input.value = '';
+            document.getElementById('status').textContent = '🧠 Thinking...';
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        message: message, 
+                        pattern: currentPattern, 
+                        truth_box: true 
+                    })
+                });
+                
+                const data = await response.json();
+                const aiResponse = data.response || 'No response from LROS.';
+                
+                addMessage(aiResponse, false);
+                
+                // MAKE LROS SPEAK THE RESPONSE
+                speakResponse(aiResponse);
+                
+                document.getElementById('status').textContent = '⚡ Ready';
+                
+            } catch (error) {
+                addMessage('Error: ' + error.message, false);
+                document.getElementById('status').textContent = '❌ Error';
+            }
+        }
+        
+        // VOICE INPUT - LROS LISTENS
+        function startVoice() {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert('Voice recognition not supported. Try Chrome.');
+                return;
+            }
+            
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            document.getElementById('status').textContent = '🎤 Listening...';
+            
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = text;
+                document.getElementById('status').textContent = '📝 Processing...';
+                sendMessage();
+            };
+            
+            recognition.onerror = function() {
+                document.getElementById('status').textContent = '❌ Try again';
+            };
+            
+            recognition.start();
+        }
+        
+        // Pattern selection
+        document.querySelectorAll('.pattern-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentPattern = btn.dataset.pattern;
+                document.getElementById('status').textContent = `⚡ Pattern: ${currentPattern}`;
+            });
+        });
+    </script>
+</body>
+</html>
