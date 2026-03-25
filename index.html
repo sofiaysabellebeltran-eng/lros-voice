@@ -29,7 +29,7 @@
             background: #0f0f1a;
             border-radius: 15px;
             padding: 20px;
-            height: 300px;
+            height: 400px;
             overflow-y: auto;
             margin-bottom: 20px;
         }
@@ -38,10 +38,23 @@
             padding: 10px 15px;
             border-radius: 15px;
             max-width: 80%;
+            word-wrap: break-word;
         }
-        .user-message { background: #0078ff; color: white; margin-left: auto; text-align: right; }
-        .ai-message { background: #2d2d3a; color: white; }
-        .input-area { display: flex; gap: 10px; margin-bottom: 10px; }
+        .user-message { 
+            background: #0078ff; 
+            color: white; 
+            margin-left: auto; 
+            text-align: right; 
+        }
+        .ai-message { 
+            background: #2d2d3a; 
+            color: white; 
+        }
+        .input-area { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 10px; 
+        }
         input {
             flex: 1;
             padding: 12px;
@@ -60,8 +73,11 @@
             cursor: pointer;
             font-size: 16px;
         }
+        button:hover { background: #005fcc; }
         .voice-btn { background: #00cc88; }
+        .voice-btn:hover { background: #009966; }
         .status { text-align: center; color: #888; font-size: 12px; margin-top: 10px; }
+        .error { color: #ff6b6b; }
     </style>
 </head>
 <body>
@@ -80,8 +96,8 @@
     </div>
 
     <script>
-        // CHANGE THIS TO YOUR BACKEND URL
-        const API_URL = 'https://lros-backend-slgg.onrender.com/chat';
+        // Use your backend URL
+        const API_URL = 'https://lros-backend-slgg.onrender.com/api/chat';
         
         function addMessage(text, isUser) {
             const chatBox = document.getElementById('chatBox');
@@ -104,36 +120,48 @@
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message })
+                    headers: { 
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ 
+                        message: message,
+                        pattern: 'single',
+                        truth_box: true
+                    })
                 });
+                
                 const data = await response.json();
                 addMessage(data.response, false);
                 document.getElementById('status').textContent = 'Ready';
             } catch (error) {
                 addMessage('Error: ' + error.message, false);
                 document.getElementById('status').textContent = 'Error';
+                console.error('Fetch error:', error);
             }
         }
         
         function startVoice() {
             if (!('webkitSpeechRecognition' in window)) {
-                alert('Voice recognition not supported. Try Chrome.');
+                alert('Voice recognition not supported in this browser. Try Chrome or Edge.');
                 return;
             }
+            
             const recognition = new webkitSpeechRecognition();
             recognition.lang = 'en-US';
             recognition.interimResults = false;
             document.getElementById('status').textContent = 'Listening...';
+            
             recognition.onresult = function(event) {
                 const text = event.results[0][0].transcript;
                 document.getElementById('messageInput').value = text;
                 document.getElementById('status').textContent = 'Processing...';
                 sendMessage();
             };
+            
             recognition.onerror = function() {
                 document.getElementById('status').textContent = 'Try again';
             };
+            
             recognition.start();
         }
     </script>
