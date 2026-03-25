@@ -1,53 +1,141 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-import os
-import httpx
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LROS Voice AI</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #888; text-align: center; margin-bottom: 30px; }
+        .chat-box {
+            background: #0f0f1a;
+            border-radius: 15px;
+            padding: 20px;
+            height: 300px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+        }
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+        .user-message { background: #0078ff; color: white; margin-left: auto; text-align: right; }
+        .ai-message { background: #2d2d3a; color: white; }
+        .input-area { display: flex; gap: 10px; margin-bottom: 10px; }
+        input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 25px;
+            background: #2d2d3a;
+            color: white;
+            font-size: 16px;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 25px;
+            background: #0078ff;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .voice-btn { background: #00cc88; }
+        .status { text-align: center; color: #888; font-size: 12px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎤 LROS Voice AI</h1>
+        <div class="subtitle">Speak or type – AI responds</div>
+        <div class="chat-box" id="chatBox">
+            <div class="message ai-message">Hello! I'm LROS. Ask me anything or click the microphone to speak.</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()">Send</button>
+            <button class="voice-btn" onclick="startVoice()">🎤</button>
+        </div>
+        <div class="status" id="status">Ready</div>
+    </div>
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-class ChatRequest(BaseModel):
-    message: str
-
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "")
-
-@app.get("/")
-async def root():
-    return {"message": "LROS Backend is running!"}
-
-@app.get("/health")
-async def health():
-    return {"status": "ok"}
-
-@app.post("/chat")
-async def chat(request: ChatRequest):
-    if not DEEPSEEK_API_KEY:
-        return {"response": f"You said: {request.message} (Add DeepSeek API key to enable AI)"}
-    
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                "https://api.deepseek.com/v1/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": "deepseek-chat",
-                    "messages": [{"role": "user", "content": request.message}],
-                    "temperature": 0.7
-                }
-            )
-            data = response.json()
-            ai_response = data["choices"][0]["message"]["content"]
-            return {"response": ai_response}
-    except Exception as e:
-        return {"response": f"Error: {str(e)}"}
+    <script>
+        // CHANGE THIS TO YOUR BACKEND URL
+        const API_URL = 'https://lros-backend-slgg.onrender.com/chat';
+        
+        function addMessage(text, isUser) {
+            const chatBox = document.getElementById('chatBox');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+            messageDiv.textContent = text;
+            chatBox.appendChild(messageDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+        
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+            
+            addMessage(message, true);
+            input.value = '';
+            document.getElementById('status').textContent = 'Thinking...';
+            
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: message })
+                });
+                const data = await response.json();
+                addMessage(data.response, false);
+                document.getElementById('status').textContent = 'Ready';
+            } catch (error) {
+                addMessage('Error: ' + error.message, false);
+                document.getElementById('status').textContent = 'Error';
+            }
+        }
+        
+        function startVoice() {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert('Voice recognition not supported. Try Chrome.');
+                return;
+            }
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.interimResults = false;
+            document.getElementById('status').textContent = 'Listening...';
+            recognition.onresult = function(event) {
+                const text = event.results[0][0].transcript;
+                document.getElementById('messageInput').value = text;
+                document.getElementById('status').textContent = 'Processing...';
+                sendMessage();
+            };
+            recognition.onerror = function() {
+                document.getElementById('status').textContent = 'Try again';
+            };
+            recognition.start();
+        }
+    </script>
+</body>
+</html>
