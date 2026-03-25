@@ -23,16 +23,8 @@
             max-width: 600px;
             box-shadow: 0 8px 32px rgba(0,0,0,0.3);
         }
-        h1 {
-            color: white;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-        .subtitle {
-            color: #888;
-            text-align: center;
-            margin-bottom: 30px;
-        }
+        h1 { color: white; text-align: center; margin-bottom: 10px; }
+        .subtitle { color: #888; text-align: center; margin-bottom: 30px; }
         .chat-box {
             background: #0f0f1a;
             border-radius: 15px;
@@ -47,21 +39,9 @@
             border-radius: 15px;
             max-width: 80%;
         }
-        .user-message {
-            background: #0078ff;
-            color: white;
-            margin-left: auto;
-            text-align: right;
-        }
-        .ai-message {
-            background: #2d2d3a;
-            color: white;
-        }
-        .input-area {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
+        .user-message { background: #0078ff; color: white; margin-left: auto; text-align: right; }
+        .ai-message { background: #2d2d3a; color: white; }
+        .input-area { display: flex; gap: 10px; margin-bottom: 10px; }
         input {
             flex: 1;
             padding: 12px;
@@ -80,31 +60,17 @@
             cursor: pointer;
             font-size: 16px;
         }
-        button:hover {
-            background: #005fcc;
-        }
-        .voice-btn {
-            background: #00cc88;
-        }
-        .voice-btn:hover {
-            background: #009966;
-        }
-        .status {
-            text-align: center;
-            color: #888;
-            font-size: 12px;
-        }
+        .voice-btn { background: #00cc88; }
+        .status { text-align: center; color: #888; font-size: 12px; margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎤 LROS Voice AI</h1>
         <div class="subtitle">Speak or type – AI responds</div>
-        
         <div class="chat-box" id="chatBox">
             <div class="message ai-message">Hello! I'm LROS. Ask me anything or click the microphone to speak.</div>
         </div>
-        
         <div class="input-area">
             <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button onclick="sendMessage()">Send</button>
@@ -114,6 +80,7 @@
     </div>
 
     <script>
+        // CHANGE THIS TO YOUR BACKEND URL
         const API_URL = 'https://lros-backend-slgg.onrender.com/chat';
         
         function addMessage(text, isUser) {
@@ -151,26 +118,22 @@
         
         function startVoice() {
             if (!('webkitSpeechRecognition' in window)) {
-                alert('Voice recognition not supported in this browser. Try Chrome or Edge.');
+                alert('Voice recognition not supported. Try Chrome.');
                 return;
             }
-            
             const recognition = new webkitSpeechRecognition();
             recognition.lang = 'en-US';
             recognition.interimResults = false;
             document.getElementById('status').textContent = 'Listening...';
-            
             recognition.onresult = function(event) {
                 const text = event.results[0][0].transcript;
                 document.getElementById('messageInput').value = text;
                 document.getElementById('status').textContent = 'Processing...';
                 sendMessage();
             };
-            
             recognition.onerror = function() {
                 document.getElementById('status').textContent = 'Try again';
             };
-            
             recognition.start();
         }
     </script>
