@@ -23,22 +23,34 @@
         }
         .card h2 { color: #0078ff; margin-bottom: 15px; font-size: 1.2rem; }
         .metric { font-size: 2rem; color: white; margin: 10px 0; }
-        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; }
-        .success { background: #00aa77; color: white; }
-        .warning { background: #ffaa44; color: black; }
-        .danger { background: #ff4444; color: white; }
-        table { width: 100%; color: #ccc; border-collapse: collapse; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #2a2a3a; }
-        .refresh-btn {
+        .status-badge { 
+            display: inline-block; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .status-active { background: #00aa77; color: white; }
+        .status-emergency { background: #ff4444; color: white; }
+        .status-lockdown { background: #ffaa44; color: black; }
+        .status-destruct { background: #8b0000; color: white; }
+        button {
             background: #0078ff;
             color: white;
             border: none;
             padding: 10px 20px;
             border-radius: 25px;
             cursor: pointer;
-            margin-bottom: 20px;
+            margin: 5px;
         }
+        button.danger { background: #ff4444; }
+        button.warning { background: #ffaa44; color: black; }
+        button.success { background: #00aa77; }
+        .refresh-btn { background: #0078ff; margin-bottom: 20px; }
+        table { width: 100%; color: #ccc; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #2a2a3a; }
         .status { text-align: center; color: #888; margin-top: 20px; }
+        .governance-section { border-top: 1px solid #2a2a3a; margin-top: 20px; padding-top: 20px; }
     </style>
 </head>
 <body>
@@ -48,37 +60,43 @@
         
         <div class="grid">
             <div class="card">
+                <h2>⚖️ System Governance</h2>
+                <div id="governanceState">Loading...</div>
+                <div style="margin-top: 15px;">
+                    <button class="danger" onclick="emergencyStop()">🛑 Emergency Stop</button>
+                    <button class="success" onclick="releaseStop()">✅ Release Stop</button>
+                    <button class="warning" onclick="toggleOverride()">👑 Toggle Founder Override</button>
+                </div>
+            </div>
+            <div class="card">
                 <h2>📊 Bandit Stats</h2>
                 <div id="banditStats">Loading...</div>
             </div>
             <div class="card">
-                <h2>🌐 Swarm Stats</h2>
+                <h2>🌐 Swarm & Community</h2>
                 <div id="swarmStats">Loading...</div>
-            </div>
-            <div class="card">
-                <h2>📈 A/B Tests</h2>
-                <div id="abTests">Loading...</div>
+                <div id="communityStats">Loading...</div>
             </div>
         </div>
         
         <div class="grid">
             <div class="card">
+                <h2>📈 A/B Tests</h2>
+                <div id="abTests">Loading...</div>
+            </div>
+            <div class="card">
                 <h2>🔍 Fine-Tuning Data</h2>
                 <div id="finetuneStats">Loading...</div>
             </div>
             <div class="card">
-                <h2>⚠️ Active Alerts</h2>
-                <div id="alerts">Loading...</div>
-            </div>
-            <div class="card">
-                <h2>👥 User Personas</h2>
-                <div id="personas">Loading...</div>
+                <h2>⚠️ Constitutional Breaches</h2>
+                <div id="breaches">Loading...</div>
             </div>
         </div>
         
         <div class="card">
-            <h2>📋 Recent Activity</h2>
-            <div id="activity">Loading...</div>
+            <h2>📋 Recent Governance Actions</h2>
+            <div id="governanceHistory">Loading...</div>
         </div>
         
         <div class="status" id="status">⚡ Ready</div>
@@ -86,7 +104,6 @@
 
     <script>
         const BACKEND_URL = 'https://lros-full-backend.onrender.com';
-        const HUB_URL = 'https://lros-swarm-hub.onrender.com';
         const ADMIN_KEY = 'lros-admin-2026';
         
         async function fetchWithAuth(url) {
@@ -99,82 +116,141 @@
         async function refreshAll() {
             document.getElementById('status').textContent = '🔄 Refreshing...';
             
+            // Governance State
+            try {
+                const gov = await fetch(`${BACKEND_URL}/api/governance/state`).then(r => r.json());
+                let stateClass = 'status-active';
+                if (gov.state === 'emergency_stop') stateClass = 'status-emergency';
+                else if (gov.state === 'self_destruct') stateClass = 'status-destruct';
+                else if (gov.state === 'lockdown') stateClass = 'status-lockdown';
+                
+                const govHtml = `
+                    <div><span class="status-badge ${stateClass}">${gov.state.toUpperCase()}</span></div>
+                    <div class="metric">⚠️ Breaches: ${gov.constitutional_breaches}</div>
+                    <div>🚨 Emergency Stop: ${gov.emergency_stop ? 'ACTIVE' : 'OFF'}</div>
+                    <div>👑 Override: ${gov.override_active ? 'ACTIVE' : 'OFF'}</div>
+                    <div>💀 Self-Destruct: ${gov.self_destruct ? 'TRIGGERED' : 'SAFE'}</div>
+                `;
+                document.getElementById('governanceState').innerHTML = govHtml;
+            } catch(e) { document.getElementById('governanceState').innerHTML = 'Error loading'; }
+            
             // Bandit Stats
             try {
                 const bandit = await fetch(`${BACKEND_URL}/api/bandit/stats`).then(r => r.json());
                 const banditHtml = `
-                    <table>
-                        <tr><th>Pattern</th><th>Pulls</th><th>Avg Reward</th></tr>
+                     <table>
+                         <tr><th>Pattern</th><th>Pulls</th><th>Avg Reward</th></tr>
                         ${Object.entries(bandit.patterns).map(([name, stats]) => `
-                            <tr>
-                                <td>${name}</td>
-                                <td>${stats.pulls}</td>
-                                <td>${stats.avg_reward.toFixed(3)}</td>
-                            </tr>
+                            <tr><td>${name}</td><td>${stats.pulls}</td><td>${stats.avg_reward.toFixed(3)}</td></tr>
                         `).join('')}
                     </table>
-                    <div class="metric">Total Pulls: ${bandit.total_pulls}</div>
+                    <div class="metric">Total: ${bandit.total_pulls}</div>
                 `;
                 document.getElementById('banditStats').innerHTML = banditHtml;
-            } catch(e) { document.getElementById('banditStats').innerHTML = 'Error loading'; }
+            } catch(e) { document.getElementById('banditStats').innerHTML = 'Error'; }
             
             // Swarm Stats
             try {
-                const swarm = await fetch(`${HUB_URL}/api/swarm/stats`).then(r => r.json());
-                const swarmHtml = `
-                    <div class="metric">${swarm.instances} Instances</div>
-                    <div class="metric">Best Pattern: ${swarm.best_pattern}</div>
-                    <div>Total Swarm Pulls: ${swarm.total_pulls}</div>
+                const swarm = await fetch('https://lros-swarm-hub.onrender.com/api/swarm/stats').then(r => r.json());
+                document.getElementById('swarmStats').innerHTML = `
+                    <div class="metric">${swarm.instances || 0} Instances</div>
+                    <div>Best Pattern: ${swarm.best_pattern || 'N/A'}</div>
                 `;
-                document.getElementById('swarmStats').innerHTML = swarmHtml;
-            } catch(e) { document.getElementById('swarmStats').innerHTML = 'Swarm hub not available'; }
+            } catch(e) { document.getElementById('swarmStats').innerHTML = 'Swarm hub connecting...'; }
+            
+            // Community Stats
+            try {
+                const community = await fetch('https://lros-swarm-hub.onrender.com/api/community/stats').then(r => r.json());
+                document.getElementById('communityStats').innerHTML = `
+                    <div>🌍 Community Patterns: ${community.total_patterns || 0}</div>
+                    <div>👍 Total Votes: ${community.total_votes || 0}</div>
+                `;
+            } catch(e) { document.getElementById('communityStats').innerHTML = 'Community hub connecting...'; }
             
             // A/B Tests
             try {
                 const tests = await fetch(`${BACKEND_URL}/api/ab/tests`).then(r => r.json());
                 if (tests.tests && tests.tests.length > 0) {
                     const test = tests.tests[0];
-                    const abHtml = `
-                        <table>
-                            <tr><th>Variant</th><th>Exposures</th><th>Conversions</th><th>Rate</th></tr>
-                            <tr><td>${test.variant_a}</td><td>${test.exposures_a}</td><td>${test.conversions_a}</td><td>${(test.conversion_rate_a * 100).toFixed(1)}%</td></tr>
-                            <tr><td>${test.variant_b}</td><td>${test.exposures_b}</td><td>${test.conversions_b}</td><td>${(test.conversion_rate_b * 100).toFixed(1)}%</td></tr>
-                        </table>
-                        <div class="metric ${test.winner === 'a' ? 'success' : test.winner === 'b' ? 'warning' : ''}">
-                            Winner: ${test.winner === 'tie' ? 'Tie' : test.winner.toUpperCase()}
-                        </div>
+                    document.getElementById('abTests').innerHTML = `
+                        <div>${test.variant_a} vs ${test.variant_b}</div>
+                        <div>Exposures: ${test.exposures_a + test.exposures_b}</div>
+                        <div>Winner: ${test.winner === 'tie' ? 'Tie' : test.winner.toUpperCase()}</div>
                     `;
-                    document.getElementById('abTests').innerHTML = abHtml;
                 } else {
                     document.getElementById('abTests').innerHTML = 'No active A/B tests';
                 }
-            } catch(e) { document.getElementById('abTests').innerHTML = 'Error loading'; }
+            } catch(e) { document.getElementById('abTests').innerHTML = 'Error'; }
             
-            // Fine-Tuning Stats
+            // Fine-Tuning
             try {
                 const ft = await fetchWithAuth(`${BACKEND_URL}/api/finetune/stats`);
-                const ftHtml = `
-                    <div class="metric">${ft.total} Training Pairs</div>
+                document.getElementById('finetuneStats').innerHTML = `
+                    <div class="metric">${ft.total || 0} Training Pairs</div>
+                    ${Object.entries(ft.by_pattern || {}).map(([p, c]) => `<div>${p}: ${c} samples</div>`).join('')}
+                `;
+            } catch(e) { document.getElementById('finetuneStats').innerHTML = 'No data yet'; }
+            
+            // Constitutional Breaches
+            try {
+                const breaches = await fetchWithAuth(`${BACKEND_URL}/api/governance/breaches`);
+                const breachesHtml = `
+                    <div class="metric">${breaches.breaches?.length || 0} Total Breaches</div>
+                    ${breaches.breaches?.slice(-5).map(b => `
+                        <div style="font-size: 11px; color: #ff8888;">${b.timestamp?.substring(0, 16)}: ${b.attempt?.substring(0, 50)}</div>
+                    `).join('') || '<div>No breaches recorded</div>'}
+                `;
+                document.getElementById('breaches').innerHTML = breachesHtml;
+            } catch(e) { document.getElementById('breaches').innerHTML = 'No breaches'; }
+            
+            // Governance History
+            try {
+                const history = await fetchWithAuth(`${BACKEND_URL}/api/governance/history?limit=10`);
+                const historyHtml = `
                     <table>
-                        ${Object.entries(ft.by_pattern || {}).map(([pattern, count]) => `
-                            <tr><td>${pattern}</td><td>${count} samples</td></tr>
-                        `).join('')}
+                        <tr><th>Time</th><th>Action</th><th>User</th></tr>
+                        ${history.history?.slice(-8).map(h => `
+                            <tr>
+                                <td>${h.timestamp?.substring(0, 16)}</td>
+                                <td>${h.action}</td>
+                                <td>${h.user_id || 'system'}</td>
+                            </tr>
+                        `).join('') || '<tr><td colspan="3">No history</td></tr>'}
                     </table>
                 `;
-                document.getElementById('finetuneStats').innerHTML = ftHtml;
-            } catch(e) { document.getElementById('finetuneStats').innerHTML = 'No fine-tuning data yet'; }
-            
-            // Alerts
-            document.getElementById('alerts').innerHTML = '<div>No active alerts</div>';
-            
-            // Personas
-            document.getElementById('personas').innerHTML = '<div>Use the main chat to create personas</div>';
-            
-            // Activity
-            document.getElementById('activity').innerHTML = '<div>Check back after more interactions</div>';
+                document.getElementById('governanceHistory').innerHTML = historyHtml;
+            } catch(e) { document.getElementById('governanceHistory').innerHTML = 'No history'; }
             
             document.getElementById('status').textContent = '✅ Updated';
             setTimeout(() => document.getElementById('status').textContent = '⚡ Ready', 2000);
+        }
+        
+        async function emergencyStop() {
+            const reason = prompt('Reason for emergency stop:');
+            if (!reason) return;
+            await fetch(`${BACKEND_URL}/api/governance/emergency-stop?reason=${encodeURIComponent(reason)}`, {
+                method: 'POST',
+                headers: { 'x-api-key': ADMIN_KEY, 'user-id': 'founder' }
+            });
+            refreshAll();
+        }
+        
+        async function releaseStop() {
+            await fetch(`${BACKEND_URL}/api/governance/release-stop`, {
+                method: 'POST',
+                headers: { 'x-api-key': ADMIN_KEY, 'user-id': 'founder' }
+            });
+            refreshAll();
+        }
+        
+        async function toggleOverride() {
+            const state = await fetch(`${BACKEND_URL}/api/governance/state`).then(r => r.json());
+            const newState = !state.override_active;
+            await fetch(`${BACKEND_URL}/api/governance/override?enabled=${newState}`, {
+                method: 'POST',
+                headers: { 'x-api-key': ADMIN_KEY, 'user-id': 'founder' }
+            });
+            refreshAll();
         }
         
         refreshAll();
