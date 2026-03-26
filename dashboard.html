@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LROS Founder Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #0a0a1a, #0f0f2a);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { color: white; margin-bottom: 20px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+        .card {
+            background: rgba(15, 15, 30, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #2a2a3a;
+        }
+        .card h2 { color: #0078ff; margin-bottom: 15px; font-size: 1.2rem; }
+        .metric { font-size: 2rem; color: white; margin: 10px 0; }
+        .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; }
+        .success { background: #00aa77; color: white; }
+        .warning { background: #ffaa44; color: black; }
+        .danger { background: #ff4444; color: white; }
+        table { width: 100%; color: #ccc; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #2a2a3a; }
+        .refresh-btn {
+            background: #0078ff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .status { text-align: center; color: #888; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎛️ LROS Founder Dashboard</h1>
+        <button class="refresh-btn" onclick="refreshAll()">🔄 Refresh Data</button>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>📊 Bandit Stats</h2>
+                <div id="banditStats">Loading...</div>
+            </div>
+            <div class="card">
+                <h2>🌐 Swarm Stats</h2>
+                <div id="swarmStats">Loading...</div>
+            </div>
+            <div class="card">
+                <h2>📈 A/B Tests</h2>
+                <div id="abTests">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>🔍 Fine-Tuning Data</h2>
+                <div id="finetuneStats">Loading...</div>
+            </div>
+            <div class="card">
+                <h2>⚠️ Active Alerts</h2>
+                <div id="alerts">Loading...</div>
+            </div>
+            <div class="card">
+                <h2>👥 User Personas</h2>
+                <div id="personas">Loading...</div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📋 Recent Activity</h2>
+            <div id="activity">Loading...</div>
+        </div>
+        
+        <div class="status" id="status">⚡ Ready</div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'https://lros-full-backend.onrender.com';
+        const HUB_URL = 'https://lros-swarm-hub.onrender.com';
+        const ADMIN_KEY = 'lros-admin-2026';
+        
+        async function fetchWithAuth(url) {
+            const response = await fetch(url, {
+                headers: { 'x-api-key': ADMIN_KEY }
+            });
+            return response.json();
+        }
+        
+        async function refreshAll() {
+            document.getElementById('status').textContent = '🔄 Refreshing...';
+            
+            // Bandit Stats
+            try {
+                const bandit = await fetch(`${BACKEND_URL}/api/bandit/stats`).then(r => r.json());
+                const banditHtml = `
+                    <table>
+                        <tr><th>Pattern</th><th>Pulls</th><th>Avg Reward</th></tr>
+                        ${Object.entries(bandit.patterns).map(([name, stats]) => `
+                            <tr>
+                                <td>${name}</td>
+                                <td>${stats.pulls}</td>
+                                <td>${stats.avg_reward.toFixed(3)}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                    <div class="metric">Total Pulls: ${bandit.total_pulls}</div>
+                `;
+                document.getElementById('banditStats').innerHTML = banditHtml;
+            } catch(e) { document.getElementById('banditStats').innerHTML = 'Error loading'; }
+            
+            // Swarm Stats
+            try {
+                const swarm = await fetch(`${HUB_URL}/api/swarm/stats`).then(r => r.json());
+                const swarmHtml = `
+                    <div class="metric">${swarm.instances} Instances</div>
+                    <div class="metric">Best Pattern: ${swarm.best_pattern}</div>
+                    <div>Total Swarm Pulls: ${swarm.total_pulls}</div>
+                `;
+                document.getElementById('swarmStats').innerHTML = swarmHtml;
+            } catch(e) { document.getElementById('swarmStats').innerHTML = 'Swarm hub not available'; }
+            
+            // A/B Tests
+            try {
+                const tests = await fetch(`${BACKEND_URL}/api/ab/tests`).then(r => r.json());
+                if (tests.tests && tests.tests.length > 0) {
+                    const test = tests.tests[0];
+                    const abHtml = `
+                        <table>
+                            <tr><th>Variant</th><th>Exposures</th><th>Conversions</th><th>Rate</th></tr>
+                            <tr><td>${test.variant_a}</td><td>${test.exposures_a}</td><td>${test.conversions_a}</td><td>${(test.conversion_rate_a * 100).toFixed(1)}%</td></tr>
+                            <tr><td>${test.variant_b}</td><td>${test.exposures_b}</td><td>${test.conversions_b}</td><td>${(test.conversion_rate_b * 100).toFixed(1)}%</td></tr>
+                        </table>
+                        <div class="metric ${test.winner === 'a' ? 'success' : test.winner === 'b' ? 'warning' : ''}">
+                            Winner: ${test.winner === 'tie' ? 'Tie' : test.winner.toUpperCase()}
+                        </div>
+                    `;
+                    document.getElementById('abTests').innerHTML = abHtml;
+                } else {
+                    document.getElementById('abTests').innerHTML = 'No active A/B tests';
+                }
+            } catch(e) { document.getElementById('abTests').innerHTML = 'Error loading'; }
+            
+            // Fine-Tuning Stats
+            try {
+                const ft = await fetchWithAuth(`${BACKEND_URL}/api/finetune/stats`);
+                const ftHtml = `
+                    <div class="metric">${ft.total} Training Pairs</div>
+                    <table>
+                        ${Object.entries(ft.by_pattern || {}).map(([pattern, count]) => `
+                            <tr><td>${pattern}</td><td>${count} samples</td></tr>
+                        `).join('')}
+                    </table>
+                `;
+                document.getElementById('finetuneStats').innerHTML = ftHtml;
+            } catch(e) { document.getElementById('finetuneStats').innerHTML = 'No fine-tuning data yet'; }
+            
+            // Alerts
+            document.getElementById('alerts').innerHTML = '<div>No active alerts</div>';
+            
+            // Personas
+            document.getElementById('personas').innerHTML = '<div>Use the main chat to create personas</div>';
+            
+            // Activity
+            document.getElementById('activity').innerHTML = '<div>Check back after more interactions</div>';
+            
+            document.getElementById('status').textContent = '✅ Updated';
+            setTimeout(() => document.getElementById('status').textContent = '⚡ Ready', 2000);
+        }
+        
+        refreshAll();
+        setInterval(refreshAll, 30000);
+    </script>
+</body>
+</html>
