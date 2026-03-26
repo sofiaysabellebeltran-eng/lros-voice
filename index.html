@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LROS Voice AI – Smart Learning</title>
+    <title>LROS Voice AI – Community Swarm</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -33,9 +33,33 @@
         }
         .pattern-btn:hover { background: #3a3a4a; }
         .pattern-btn.active { background: #0078ff; }
+        .community-btn {
+            background: #3a3a4a;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            margin-bottom: 15px;
+        }
+        .community-btn:hover { background: #4a4a5a; }
+        .community-panel {
+            background: #0a0a14;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #2a2a3a;
+        }
         .chat-box {
-            background: #0a0a14; border-radius: 15px; padding: 15px;
-            height: 400px; overflow-y: auto; margin-bottom: 15px; border: 1px solid #2a2a3a;
+            background: #0a0a14;
+            border-radius: 15px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            border: 1px solid #2a2a3a;
         }
         .message { margin-bottom: 15px; padding: 10px 15px; border-radius: 18px; max-width: 85%; word-wrap: break-word; }
         .user-message { background: #0078ff; color: white; margin-left: auto; text-align: right; }
@@ -53,13 +77,21 @@
         .status { text-align: center; color: #888; font-size: 11px; margin-top: 10px; padding: 8px; }
         .badge { text-align: center; font-size: 10px; color: #00aa77; margin-top: 8px; }
         .persona-badge { text-align: center; font-size: 10px; color: #ffaa44; margin-top: 5px; }
-        .ab-badge { text-align: center; font-size: 10px; color: #aa88ff; margin-top: 5px; }
+        .community-pattern-item {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #1a1a2a;
+            border-radius: 10px;
+        }
+        .community-pattern-name { color: #00aa77; font-weight: bold; font-size: 13px; }
+        .community-pattern-prompt { color: #888; font-size: 11px; margin: 5px 0; }
+        .community-pattern-stats { color: #ffaa44; font-size: 10px; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>🎤 LROS Voice AI</h1>
-        <div class="subtitle">Smart Learning · A/B Testing · Fine-Tuning</div>
+        <div class="subtitle">Community Swarm · Auto-Optimizing</div>
         
         <div class="pattern-selector">
             <button class="pattern-btn" data-pattern="single">⚡ Single</button>
@@ -68,8 +100,17 @@
             <button class="pattern-btn active" data-pattern="auto">🤖 Auto (Smart)</button>
         </div>
         
+        <div style="text-align: center; margin-bottom: 15px;">
+            <button id="communityBtn" class="community-btn">🌍 Community Hub</button>
+        </div>
+        
+        <div id="communityPanel" class="community-panel" style="display: none;">
+            <h3 style="color: #0078ff; margin-bottom: 10px; font-size: 14px;">🌍 Top Community Patterns</h3>
+            <div id="communityPatterns">Loading community patterns...</div>
+        </div>
+        
         <div class="chat-box" id="chatBox">
-            <div class="message ai-message">🔷 Hello. I am LROS. I use A/B testing and fine-tuning to improve. Rate my answers with 👍 👎.</div>
+            <div class="message ai-message">🔷 Hello. I am LROS. Rate my responses with 👍 👎 to help the community learn together.</div>
         </div>
         
         <div class="input-area">
@@ -80,7 +121,6 @@
         
         <div class="badge" id="swarmBadge">🌐 Swarm: learning...</div>
         <div class="persona-badge" id="personaBadge">👤 Loading profile...</div>
-        <div class="ab-badge" id="abBadge">📊 A/B Test: waiting for data</div>
         <div class="status" id="status">⚡ Ready</div>
     </div>
 
@@ -94,10 +134,7 @@
             localStorage.setItem('lros_user_id', userId);
         }
         
-        let lastMessage = '';
-        let lastPatternUsed = '';
-        
-        function addMessage(text, isUser, rowIndex = null, patternUsed = null, abVariant = null) {
+        function addMessage(text, isUser, rowIndex = null, patternUsed = null) {
             const chatBox = document.getElementById('chatBox');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
@@ -145,26 +182,11 @@
                     document.getElementById('status').textContent = '✅ Feedback saved!';
                     fetch('https://lros-full-backend.onrender.com/api/report-to-hub', { method: 'POST' });
                     loadPersona();
-                    loadABTest();
                     setTimeout(() => document.getElementById('status').textContent = '⚡ Ready', 2000);
                 }
             } catch(error) {
                 document.getElementById('status').textContent = '❌ Feedback error';
             }
-        }
-        
-        async function loadABTest() {
-            try {
-                const response = await fetch('https://lros-full-backend.onrender.com/api/ab/tests');
-                const data = await response.json();
-                const abBadge = document.getElementById('abBadge');
-                if (data.tests && data.tests.length > 0) {
-                    const test = data.tests[0];
-                    abBadge.innerHTML = `📊 A/B: ${test.variant_a} vs ${test.variant_b} | ${test.exposures_a + test.exposures_b} exposures`;
-                } else {
-                    abBadge.innerHTML = '📊 A/B Test: Start pattern test with admin key';
-                }
-            } catch(e) { console.log('AB test not available'); }
         }
         
         async function loadPersona() {
@@ -188,6 +210,27 @@
             } catch(e) { document.getElementById('swarmBadge').innerHTML = '🌐 Swarm learning...'; }
         }
         
+        async function loadCommunityPatterns() {
+            try {
+                const response = await fetch('https://lros-full-backend.onrender.com/api/community/top');
+                const data = await response.json();
+                const container = document.getElementById('communityPatterns');
+                if (data.patterns && data.patterns.length > 0) {
+                    container.innerHTML = data.patterns.map(p => `
+                        <div class="community-pattern-item">
+                            <div class="community-pattern-name">${p.name}</div>
+                            <div class="community-pattern-prompt">${p.prompt ? p.prompt.substring(0, 100) + '...' : 'No description'}</div>
+                            <div class="community-pattern-stats">⭐ ${p.votes || 0} votes | 📊 Score: ${p.score || 0}</div>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div style="color: #888;">No community patterns yet. Rate responses to share!</div>';
+                }
+            } catch(e) {
+                document.getElementById('communityPatterns').innerHTML = '<div style="color: #888;">Community hub connecting...</div>';
+            }
+        }
+        
         function speakResponse(text) {
             window.speechSynthesis.cancel();
             const utterance = new SpeechSynthesisUtterance(text.replace(/[*_#]/g, ''));
@@ -200,7 +243,6 @@
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             if (!message) return;
-            lastMessage = message;
             let pattern = 'auto';
             const active = document.querySelector('.pattern-btn.active');
             if (active && active.dataset.pattern) pattern = active.dataset.pattern;
@@ -214,8 +256,7 @@
                     body: JSON.stringify({ message: message, pattern: pattern, model: 'deepseek', truth_box: true, user_id: userId })
                 });
                 const data = await response.json();
-                lastPatternUsed = data.pattern_used;
-                addMessage(data.response, false, data.row_index, data.pattern_used, data.ab_variant);
+                addMessage(data.response, false, data.row_index, data.pattern_used);
                 speakResponse(data.response);
                 document.getElementById('status').textContent = '⚡ Ready';
             } catch(error) {
@@ -238,6 +279,17 @@
             recognition.start();
         }
         
+        // Community Hub toggle
+        let communityVisible = false;
+        document.getElementById('communityBtn').onclick = async () => {
+            communityVisible = !communityVisible;
+            document.getElementById('communityPanel').style.display = communityVisible ? 'block' : 'none';
+            if (communityVisible) {
+                await loadCommunityPatterns();
+            }
+        };
+        
+        // Pattern selector
         document.querySelectorAll('.pattern-btn').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.pattern-btn').forEach(b => b.classList.remove('active'));
@@ -249,10 +301,8 @@
         
         loadPersona();
         updateSwarmStats();
-        loadABTest();
         setInterval(updateSwarmStats, 30000);
         setInterval(loadPersona, 60000);
-        setInterval(loadABTest, 30000);
     </script>
 </body>
 </html>
