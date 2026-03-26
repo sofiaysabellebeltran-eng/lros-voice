@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LROS Voice AI – Community Swarm</title>
+    <title>LROS Voice AI – Multi-Model Swarm</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -26,13 +26,34 @@
         }
         h1 { color: white; text-align: center; font-size: 2rem; margin-bottom: 5px; }
         .subtitle { color: #888; text-align: center; margin-bottom: 20px; font-size: 0.85rem; }
-        .pattern-selector { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; flex-wrap: wrap; }
-        .pattern-btn {
-            background: #2a2a3a; color: white; border: none; padding: 8px 16px;
-            border-radius: 20px; cursor: pointer; font-size: 12px; transition: all 0.2s;
+        
+        .pattern-selector {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
         }
-        .pattern-btn:hover { background: #3a3a4a; }
+        .model-selector {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        .pattern-btn, .model-select {
+            background: #2a2a3a;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        .pattern-btn:hover, .model-select:hover { background: #3a3a4a; }
         .pattern-btn.active { background: #0078ff; }
+        .model-select {
+            background: #2a2a3a;
+            cursor: pointer;
+        }
         .community-btn {
             background: #3a3a4a;
             color: white;
@@ -41,7 +62,6 @@
             border-radius: 20px;
             cursor: pointer;
             font-size: 12px;
-            transition: all 0.2s;
             margin-bottom: 15px;
         }
         .community-btn:hover { background: #4a4a5a; }
@@ -91,13 +111,20 @@
 <body>
     <div class="container">
         <h1>🎤 LROS Voice AI</h1>
-        <div class="subtitle">Community Swarm · Auto-Optimizing</div>
+        <div class="subtitle">Multi-Model Swarm · DeepSeek + Gemini</div>
         
         <div class="pattern-selector">
             <button class="pattern-btn" data-pattern="single">⚡ Single</button>
             <button class="pattern-btn" data-pattern="chain">🔗 Chain</button>
             <button class="pattern-btn" data-pattern="parallel">🔄 Parallel</button>
             <button class="pattern-btn active" data-pattern="auto">🤖 Auto (Smart)</button>
+        </div>
+        
+        <div class="model-selector">
+            <select id="modelSelect" class="model-select">
+                <option value="deepseek">🤖 DeepSeek (Reasoning)</option>
+                <option value="gemini">🌟 Gemini (Fast & Vision)</option>
+            </select>
         </div>
         
         <div style="text-align: center; margin-bottom: 15px;">
@@ -110,7 +137,7 @@
         </div>
         
         <div class="chat-box" id="chatBox">
-            <div class="message ai-message">🔷 Hello. I am LROS. Rate my responses with 👍 👎 to help the community learn together.</div>
+            <div class="message ai-message">🔷 Hello. I am LROS. I support DeepSeek and Gemini models. Rate my responses with 👍 👎 to help me learn.</div>
         </div>
         
         <div class="input-area">
@@ -134,13 +161,23 @@
             localStorage.setItem('lros_user_id', userId);
         }
         
-        function addMessage(text, isUser, rowIndex = null, patternUsed = null) {
+        function addMessage(text, isUser, rowIndex = null, patternUsed = null, modelUsed = null) {
             const chatBox = document.getElementById('chatBox');
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
             const textSpan = document.createElement('span');
             textSpan.textContent = text;
             messageDiv.appendChild(textSpan);
+            
+            // Add model badge for AI messages
+            if (!isUser && modelUsed) {
+                const modelBadge = document.createElement('div');
+                modelBadge.style.fontSize = '10px';
+                modelBadge.style.color = '#00aa77';
+                modelBadge.style.marginTop = '5px';
+                modelBadge.textContent = modelUsed === 'gemini' ? '🌟 Gemini' : '🤖 DeepSeek';
+                messageDiv.appendChild(modelBadge);
+            }
             
             if (!isUser && rowIndex && patternUsed) {
                 const feedbackDiv = document.createElement('div');
@@ -243,20 +280,33 @@
             const input = document.getElementById('messageInput');
             const message = input.value.trim();
             if (!message) return;
+            
             let pattern = 'auto';
             const active = document.querySelector('.pattern-btn.active');
             if (active && active.dataset.pattern) pattern = active.dataset.pattern;
+            
+            // Get selected model
+            const modelSelect = document.getElementById('modelSelect');
+            const model = modelSelect ? modelSelect.value : 'deepseek';
+            
             addMessage(message, true);
             input.value = '';
             document.getElementById('status').textContent = 'Thinking...';
+            
             try {
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message, pattern: pattern, model: 'deepseek', truth_box: true, user_id: userId })
+                    body: JSON.stringify({ 
+                        message: message, 
+                        pattern: pattern, 
+                        model: model,
+                        truth_box: true, 
+                        user_id: userId 
+                    })
                 });
                 const data = await response.json();
-                addMessage(data.response, false, data.row_index, data.pattern_used);
+                addMessage(data.response, false, data.row_index, data.pattern_used, data.model_used);
                 speakResponse(data.response);
                 document.getElementById('status').textContent = '⚡ Ready';
             } catch(error) {
